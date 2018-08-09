@@ -11,7 +11,7 @@ from api.serializers import PublicationSerializer
 # Create your views here.
 @api_view(['GET'])
 @permission_classes((permissions.AllowAny,))
-def publication_detail(request, pubid):
-    publication = Publication.objects.get(pk=pubid)
+def publication_detail(request, pubcode):
+    publication = Publication.objects.get(code=pubcode)
     serializer = PublicationSerializer(publication)
     return Response(serializer.data)
