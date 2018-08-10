@@ -8,7 +8,7 @@ class Publication(models.Model):
     file_name = models.CharField(max_length=200, verbose_name=_('имя файла'))
     issueNumber = models.IntegerField(verbose_name=_('номер версии'))
     content_xml = models.TextField(verbose_name=_('XML содержимое'), blank=True)
-    content_json = models.TextField(verbose_name=_('JSON содержимое'), blank=True)    
+    structure_json = models.TextField(verbose_name=_('JSON cтруктура'), blank=True)    
     modules = models.ManyToManyField('Module', through='PublicationModule', through_fields=('publication', 'module'), blank=True)
 
     def __unicode__(self):
@@ -24,19 +24,20 @@ class Publication(models.Model):
 
 
 class Module(models.Model):
-    tech_name = models.CharField(max_length=200, verbose_name=_('полное название'))
+    tech_name = models.CharField(max_length=200, verbose_name=_('полное название'), blank=True)
     title = models.CharField(max_length=200, verbose_name=_('название'))
-    code = models.CharField(max_length=200, verbose_name=_('код'))    
-    file_name = models.CharField(max_length=200, verbose_name=_('имя файла'))
-    issueNumber = models.IntegerField(verbose_name=_('номер версии'))    
+    code = models.CharField(max_length=200, verbose_name=_('код'), blank=True)    
+    file_name = models.CharField(max_length=200, verbose_name=_('имя файла'), blank=True)
+    issueNumber = models.IntegerField(verbose_name=_('номер версии'), blank=True)    
     content_xml = models.TextField(verbose_name=_('XML содержимое'), blank=True)
     content_json = models.TextField(verbose_name=_('JSON содержимое'), blank=True)
+    is_category = models.BooleanField(verbose_name=_('категория'), default=False)
 
     def __unicode__(self):
-        return self.tech_name
+        return self.title
 
     def __str__(self):
-        return self.tech_name
+        return self.title
 
     class Meta:
         verbose_name = _("модуль")

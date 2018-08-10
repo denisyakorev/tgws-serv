@@ -25,10 +25,10 @@ def get_publication_file(dir):
 		return os.path.join(dir, publication_files[0]), publication_files[0]
 
 
-def get_publication_props(pub_file_path)
+def get_publication_props(file)
 	"""
 	Открываем файл публикации и получаем оттуда все нужные параметры
-	:param str pub_file_path: Путь к файлу структуры публикации (PMC-...)
+	:param file file: Файл структуры публикации
 	:return: Объект со свойствами, аналогичными модели публикации, а именно
 	- str title
 	- str code
@@ -37,7 +37,7 @@ def get_publication_props(pub_file_path)
 	:rtype: obj
 	:raises ValueError: ошибка при разборе публикации
 	"""
-	file = codecs.open(pub_file_path, 'r', encoding="utf8", errors='replace')
+	
 	tree = ET.parse(file)
 	root = tree.getroot()
 	
@@ -47,7 +47,7 @@ def get_publication_props(pub_file_path)
 	
 	identAndStatusSection = root.find('identAndStatusSection')
 	if not identAndStatusSection:
-		raise ValueError('there is no identAndStatusSection in %s' % (pub_file_prefix))
+		raise ValueError('there is no identAndStatusSection in file')
 
 	for elem in identAndStatusSection:
 		if elem.tag == 'pmAddress':
@@ -80,6 +80,75 @@ def get_publication_props(pub_file_path)
 	else:
 		raise ValueError('publication file incomplete') 
 
+
+def create_nodes(node, parent=None):
+	"""
+	Функция, рекурсивно создающая модули и категории для переданного узла
+	:param ETreeElement node: Узел, для которого осуществляется поиск
+	:param Module parent: экземпляр модели, который будет родительским узлом
+	:return: результат выполнения операции - True при успешном выполнении
+	:rtype: bool
+	:raises ValueError: ошибки при создании модулей
+	"""
+	end_modules = node.findall('dmRef')
+	counter = 0
+	for module in end_modules:
+		counter += 1		
+		try:
+			create_end_module(module, parent, counter)
+
+		except Exception as err:
+			if parent:
+				raise ValueError('Ошибка при создании модуля №%d для узла %s'%(counter, parent.title))
+			else:
+				raise ValueError('Ошибка при создании модуля №%d для узла без родителя'%(counter, parent.title))
+
+	categories = node.findall('pmEntry')
+
+
+
+
+
+
+def load_modules(file, publication):
+	"""
+	Функция, загружающая все модули данных публикации
+	:param file file: Файл публикации
+	:param Publication publication: Экземпляр модели публикации, для которой создаются модули	
+	:return: результат выполнения операции - True при успешном выполнении
+	:rtype: bool
+	:raises ValueError: ошибка при отсутствии предусмотренного родительского узла	
+	"""
+	tree = ET.parse(file)
+	root = tree.getroot()
+	try:
+		content = root.find('content')
+	except Exception as err:
+		raise ValueError('В файле публикации не найден узел content')
+
+	#Cоздадим корневой узил
+	root_module = Module(
+		title= publication.title,
+		is_category = True
+		)
+	root_module.save()
+
+	link = PublicationModule(
+		module = root_module,
+		publication = publication,
+		order_in_parent = 0 
+		)
+	link.save()
+
+	create_nodes(content, root_module, publication)
+
+	return True
+
+
+def copy_static(dir):
+	pass
+
+
 def load_publication(dir):
 	"""
 	Функция для загрузки публикации
@@ -89,10 +158,10 @@ def load_publication(dir):
 	:raises ValueError: ошибка при загрузке публикации 
 	"""
 	pub_file_path, file_name = get_publication_file(dir)
-	pub_data = get_publication_props(pub_file_path)
-	#Надо обработать все модули
-	#Перенести весь контент
+	file = codecs.open(pub_file_path, 'r', encoding="utf8", errors='replace')
 	
+	#Создание публикации
+	pub_data = get_publication_props(file)		
 	publication = Publication(
 		title = pub_data['title'],
 		code = pub_data['code'],
@@ -101,6 +170,18 @@ def load_publication(dir):
 		content_xml = pub_data['content_xml']
 		)
 	publication.save()
+
+	#Создание модулей
+	load_modules(file, publication)
+	
+	#Перенос статического контента
+	copy_static(dir)
+
+	#Cоздание дерева модулей
+	publication.structure_json = get_tree_structure(publication.pk)
+	publication.save()
+
+	return True
 		
 		
 		
