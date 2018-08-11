@@ -26,9 +26,8 @@ class Publication(models.Model):
 class Module(models.Model):
     tech_name = models.CharField(max_length=200, verbose_name=_('полное название'), blank=True)
     title = models.CharField(max_length=200, verbose_name=_('название'))
-    code = models.CharField(max_length=200, verbose_name=_('код'), blank=True)    
     file_name = models.CharField(max_length=200, verbose_name=_('имя файла'), blank=True)
-    issueNumber = models.IntegerField(verbose_name=_('номер версии'), blank=True)    
+    issue_number = models.IntegerField(verbose_name=_('номер версии'), blank=True)
     content_xml = models.TextField(verbose_name=_('XML содержимое'), blank=True)
     content_json = models.TextField(verbose_name=_('JSON содержимое'), blank=True)
     is_category = models.BooleanField(verbose_name=_('категория'), default=False)
@@ -53,4 +52,11 @@ class PublicationModule(models.Model):
     parent = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='parents', related_query_name='parent', blank=True, null=True)
     order_in_parent = models.IntegerField()
 
+
+class TempModule(models.Model):
+    tech_name = models.CharField(max_length=200, verbose_name=_('полное название'), blank=True)
+    title = models.CharField(max_length=200, verbose_name=_('название'))
+    file_name = models.CharField(max_length=200, verbose_name=_('имя файла'), blank=True)
+    issue_number = models.IntegerField(verbose_name=_('номер версии'), blank=True)
+    content_xml = models.TextField(verbose_name=_('XML содержимое'), blank=True)
 
