@@ -2,6 +2,8 @@ import os
 import codecs
 import xml.etree.ElementTree as ET
 import xmltodict, json
+from django.conf import settings
+import shutil
 
 from core.models import Module, Publication, PublicationModule, TempModule
 
@@ -52,7 +54,7 @@ def get_publication_props(file):
         if elem.tag == 'pmAddress':
             for each in elem:
                 if each.tag == 'pmIdent':
-                    issue_number = int(each.find('issueInfo').get('issue_number'))
+                    issue_number = each.find('issueInfo').get('issue_number')
                 elif each.tag == 'pmAddressItems':
                     title = each.find('pmTitle').text
         elif elem.tag == 'pmStatus':
@@ -220,7 +222,7 @@ def load_modules_from_files(path):
         root = tree.getroot()
         dmAddressItems = root.find('identAndStatusSection').find('dmAddressItems')
         tech_name = dmAddressItems.find('dmTitle').find('techName').text
-        issue_number = int(dmAddressItems.find('dmIdent').find('issueInfo').get('issue_number'))
+        issue_number = dmAddressItems.find('dmIdent').find('issueInfo').get('issue_number')
         if not tech_name or not issue_number:
             raise ValueError('Не хватает данных для создания модуля из файла: %s' % f)
         temp_module = TempModule(
@@ -264,8 +266,64 @@ def load_modules(file, publication, path):
     return True
 
 
-def copy_static(path):
-    pass
+def copy_static(path, publication_code):
+    """
+    Функция, копирующая статические файлы публикации в папку сервера
+    :param str path: Путь к директории публикации
+    :param str code: Код публикации, будет служить названием папки для файлов в медиа-папке
+    :return: результат выполнения операции - True при успешном выполнении
+    :rtype: bool
+    """
+    static_folder = 'graphics'
+    static_path = os.path.join(path, static_folder)
+    media_path = os.path.join(settings.MEDIA_ROOT, 'pub_files', publication_code)
+    shutil.copytree(static_path, media_path)
+    return True
+
+
+def get_childrens(holder, publication, parent=None):
+    """
+    Функция, рекурсивно заполняющая массив дочерних элементов
+    :param obj holder: массив для заполнения
+    :param Module parent: экземпляр модели Модуль - родителя, для которого ищутся дочерние элементы
+    :return: результат выполнения операции - True при успешном выполнении
+    :rtype: bool
+    """
+    if not parent:
+        links = PublicationModule.objects.filter(publication=publication, parent__isnull=True).order_by('order')
+    else:
+        links = PublicationModule.objects.filter(publication=publication, parent=parent).order_by('order')
+
+    for link in links:
+        obj = {
+            'id': link.module.id,
+            'text': link.module.title,
+            'a_attr':{'href':link.module.id},
+            'children': []
+        }
+        holder.append(obj)
+        get_childrens(obj['children'], publication, parent=link.module)
+
+    return True
+
+
+def get_tree_structure(publication):
+    """
+    Функция, создающее дерево модулей в публикации
+    :param Publication publication: экземпляр модели публикации, для которой выполняется поиск
+    :return: json структура публикации
+    :rtype: str
+    :raise ValueError: не найдена публикация
+    """
+    tree = {
+        'id': publication.id,
+        'text': publication.title,
+        'state': {opened: True},
+        'children':[]
+    }
+    get_childrens(tree, publication)
+
+    return json.dumps(tree)
 
 
 def load_publication(path):
@@ -276,6 +334,7 @@ def load_publication(path):
     :rtype: bool
     :raises ValueError: ошибка при загрузке публикации
     """
+
     pub_file_path, file_name = get_publication_file(path)
     file = codecs.open(pub_file_path, 'r', encoding="utf8", errors='replace')
 
@@ -294,17 +353,20 @@ def load_publication(path):
     load_modules(file, publication)
 
     #Перенос статического контента
-    copy_static(path)
+    copy_static(path, pub_data['code'])
 
     #Cоздание дерева модулей
-    publication.structure_json = get_tree_structure(publication.pk)
+    publication.structure_json = get_tree_structure(publication)
     publication.save()
 
     return True
 
 
 
-
+"""
+from core.utils import *
+load_publication('/home/denis/projects/tgws-serv/assets/ПубликацииПАЗ/ПАЗ-320445 Вектор Next (АТ)_10.08.18_12.39.02')
+"""
 
 
 
