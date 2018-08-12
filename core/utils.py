@@ -27,10 +27,10 @@ def get_publication_file(path):
         return os.path.join(path, publication_files[0]), publication_files[0]
 
 
-def get_publication_props(file):
+def get_publication_props(file_path):
     """
     Открываем файл публикации и получаем оттуда все нужные параметры
-    :param file file: Файл структуры публикации
+    :param str file_path: Путь к файлу публикации
     :return: Объект со свойствами, аналогичными модели публикации, а именно
     - str title
     - str code
@@ -39,6 +39,7 @@ def get_publication_props(file):
     :rtype: obj
     :raises ValueError: ошибка при разборе публикации
     """
+    file = codecs.open(file_path, 'r', encoding="utf8", errors='replace')
     tree = ET.parse(file)
     root = tree.getroot()
 
@@ -54,7 +55,7 @@ def get_publication_props(file):
         if elem.tag == 'pmAddress':
             for each in elem:
                 if each.tag == 'pmIdent':
-                    issue_number = each.find('issueInfo').get('issue_number')
+                    issue_number = each.find('issueInfo').get('issueNumber')
                 elif each.tag == 'pmAddressItems':
                     title = each.find('pmTitle').text
         elif elem.tag == 'pmStatus':
@@ -114,7 +115,11 @@ def create_category(node, publication, parent=None, order=0):
     :rtype: Module, PublicationModule
     :raises ValueError: ошибка при поиске параметров, нужных для создания категории
     """
-    title = node.find('pmEntryTitle')
+    if node.tag == 'content':
+        title = publication.title
+    else:
+        title = node.find('pmEntryTitle').text
+
     if not title:
         raise ValueError('Для узла не указан заголовок')
 
@@ -141,7 +146,7 @@ def create_end_module(node, parent, publication, order):
     :raises ValueError: ошибка при поиске параметров, нужных для создания модуля
     """
     tech_name = node.find('dmRefAddressItems').find('dmTitle').find('techName').text
-    issue_number = node.find('dmRefIdent').find('issueInfo').get('issue_number')
+    issue_number = node.find('dmRefIdent').find('issueInfo').get('issueNumber')
     if not tech_name or not issue_number:
         raise ValueError('Не хватает данных для создания модуля')
     try:
@@ -151,15 +156,15 @@ def create_end_module(node, parent, publication, order):
     except TempModule.MultipleObjectsReturned:
         raise ValueError('В папке публикации найдено несколько модулей: %s c номером выпуска: %d' % (tech_name, issue_number))
 
-    obj = xmltodict.parse(temp_module.content_xml)
-    json = json.dumps(obj)
+    #obj = xmltodict.parse(temp_module.content_xml)
+    #json = json.dumps(obj)
     new_module = Module(
         tech_name = tech_name,
         issue_number = issue_number,
         title = tech_name,
         file_name = temp_module.file_name,
         content_xml = temp_module.content_xml,
-        content_json = json,
+        #content_json = json,
         is_category = False
     )
     new_module.save()
@@ -195,8 +200,8 @@ def create_nodes(node, parent, publication):
     counter = 0
     for category in categories:
         counter += 1
-        create_category(category, publication)
-        create_nodes(category, publication)
+        new_category, link = create_category(category, publication)
+        create_nodes(category, new_category, publication)
 
     return True
 
@@ -220,9 +225,9 @@ def load_modules_from_files(path):
         file = codecs.open(file_path, 'r', encoding="utf8", errors='replace')
         tree = ET.parse(file)
         root = tree.getroot()
-        dmAddressItems = root.find('identAndStatusSection').find('dmAddressItems')
-        tech_name = dmAddressItems.find('dmTitle').find('techName').text
-        issue_number = dmAddressItems.find('dmIdent').find('issueInfo').get('issue_number')
+        dmAddressItems = root.find('identAndStatusSection').find('dmAddress')
+        tech_name = dmAddressItems.find('dmAddressItems').find('dmTitle').find('techName').text
+        issue_number = dmAddressItems.find('dmIdent').find('issueInfo').get('issueNumber')
         if not tech_name or not issue_number:
             raise ValueError('Не хватает данных для создания модуля из файла: %s' % f)
         temp_module = TempModule(
@@ -239,17 +244,17 @@ def load_modules_from_files(path):
 
 
 
-def load_modules(file, publication, path):
+def load_modules(file_path, publication, path):
     """
     Функция, загружающая все модули данных публикации
-    :param file file: Файл публикации
+    :param str file_path: Путь к файлу публикации
     :param Publication publication: Экземпляр модели публикации, для которой создаются модули
     :param str path: Путь к папке публикации
     :return: результат выполнения операции - True при успешном выполнении
     :rtype: bool
     :raises ValueError: ошибка при отсутствии предусмотренного родительского узла
     """
-    load_modules_from_files(path)
+    file = codecs.open(file_path, 'r', encoding="utf8", errors='replace')
     tree = ET.parse(file)
     root = tree.getroot()
     try:
@@ -257,7 +262,7 @@ def load_modules(file, publication, path):
     except Exception as err:
         raise ValueError('В файле публикации не найден узел content: %s' % err)
 
-    root_category = create_category(content, publication)
+    root_category, link = create_category(content, publication)
     create_nodes(content, root_category, publication)
 
     #Очистим временные модули
@@ -284,15 +289,15 @@ def copy_static(path, publication_code):
 def get_childrens(holder, publication, parent=None):
     """
     Функция, рекурсивно заполняющая массив дочерних элементов
-    :param obj holder: массив для заполнения
+    :param array holder: массив для заполнения
     :param Module parent: экземпляр модели Модуль - родителя, для которого ищутся дочерние элементы
     :return: результат выполнения операции - True при успешном выполнении
     :rtype: bool
     """
     if not parent:
-        links = PublicationModule.objects.filter(publication=publication, parent__isnull=True).order_by('order')
+        links = PublicationModule.objects.filter(publication=publication, parent__isnull=True).order_by('order_in_parent')
     else:
-        links = PublicationModule.objects.filter(publication=publication, parent=parent).order_by('order')
+        links = PublicationModule.objects.filter(publication=publication, parent=parent).order_by('order_in_parent')
 
     for link in links:
         obj = {
@@ -318,10 +323,10 @@ def get_tree_structure(publication):
     tree = {
         'id': publication.id,
         'text': publication.title,
-        'state': {opened: True},
+        'state': {'opened': True},
         'children':[]
     }
-    get_childrens(tree, publication)
+    get_childrens(tree['children'], publication)
 
     return json.dumps(tree)
 
@@ -334,12 +339,9 @@ def load_publication(path):
     :rtype: bool
     :raises ValueError: ошибка при загрузке публикации
     """
-
     pub_file_path, file_name = get_publication_file(path)
-    file = codecs.open(pub_file_path, 'r', encoding="utf8", errors='replace')
-
     #Создание публикации
-    pub_data = get_publication_props(file)
+    pub_data = get_publication_props(pub_file_path)
     publication = Publication(
         title = pub_data['title'],
         code = pub_data['code'],
@@ -348,23 +350,32 @@ def load_publication(path):
         content_xml = pub_data['content_xml']
         )
     publication.save()
-
+    print("publication created")
+    load_modules_from_files(path)
+    print("loaded modules from files")
     #Создание модулей
-    load_modules(file, publication)
-
+    load_modules(pub_file_path, publication, path)
+    print("modules from publication file loaded")
     #Перенос статического контента
     copy_static(path, pub_data['code'])
-
+    print("static copied")
     #Cоздание дерева модулей
     publication.structure_json = get_tree_structure(publication)
     publication.save()
-
+    print("publication tree created")
     return True
 
 
 
 """
 from core.utils import *
+
+Publication.objects.all().delete()
+Module.objects.all().delete()
+PublicationModule.objects.all().delete()
+TempModule.objects.all().delete()
+shutil.rmtree('/home/denis/projects/tgws-serv/tgws_serv/media/pub_files/3204-A-00-0-0-00-00-A-022-A-D')
+
 load_publication('/home/denis/projects/tgws-serv/assets/ПубликацииПАЗ/ПАЗ-320445 Вектор Next (АТ)_10.08.18_12.39.02')
 """
 
