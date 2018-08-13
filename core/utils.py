@@ -296,7 +296,7 @@ def get_childrens(holder, publication, parent=None):
     """
     if not parent:
         links = PublicationModule.objects.filter(publication=publication, parent__isnull=True).order_by('order_in_parent')
-        
+
     else:
         links = PublicationModule.objects.filter(publication=publication, parent=parent).order_by('order_in_parent')
 
@@ -321,18 +321,7 @@ def get_tree_structure(publication):
     :rtype: str
     :raise ValueError: не найдена публикация
     """
-    """
-    tree = {
-        'core':{
-            'data':[{
-                'id': publication.id,
-                'text': publication.title,
-                'state': {'opened': True},
-                'children':[]
-            }]
-        }
-    }
-    """
+    
     tree = {
         'core':{
             'data':[]
