@@ -123,7 +123,6 @@ def create_category(node, publication, parent=None, order=0):
     if not title:
         raise ValueError('Для узла не указан заголовок')
 
-    # Cоздадим корневой узел
     cat = Module(
         title=title,
         is_category=True
@@ -134,7 +133,7 @@ def create_category(node, publication, parent=None, order=0):
     return cat, link
 
 
-def create_end_module(node, parent, publication, order):
+def create_end_module(node, parent=None, publication=None, order=None):
     """
     Функция, создающая модуль
     :param ETreeElement node: Узел, для которого создается модуль
@@ -173,7 +172,7 @@ def create_end_module(node, parent, publication, order):
     return new_module, link
 
 
-def create_nodes(node, parent, publication):
+def create_nodes(node, parent=None, publication=None):
     """
     Функция, рекурсивно создающая модули и категории для переданного узла
     :param ETreeElement node: Узел, для которого осуществляется поиск
@@ -201,7 +200,7 @@ def create_nodes(node, parent, publication):
     for category in categories:
         counter += 1
         new_category, link = create_category(category, publication)
-        create_nodes(category, new_category, publication)
+        create_nodes(category, parent=new_category, publication=publication)
 
     return True
 
@@ -262,11 +261,11 @@ def load_modules(file_path, publication, path):
     except Exception as err:
         raise ValueError('В файле публикации не найден узел content: %s' % err)
 
-    root_category, link = create_category(content, publication)
-    create_nodes(content, root_category, publication)
+    #root_category, link = create_category(content, publication)
+    create_nodes(content, publication=publication)
 
     #Очистим временные модули
-    TempModule.objects.all().delete()
+    #TempModule.objects.all().delete()
 
     return True
 
@@ -375,11 +374,14 @@ Publication.objects.all().delete()
 Module.objects.all().delete()
 PublicationModule.objects.all().delete()
 TempModule.objects.all().delete()
+shutil.rmtree('/home/denis/projects/tgws-serv/tgws_serv/media/pub_files/3204-A-00-0-0-00-00-A-022-A-D')
+load_publication('/home/denis/projects/tgws-serv/assets/ПубликацииПАЗ/ПАЗ-320445 Вектор Next (АТ)_10.08.18_12.39.02')
+
+
 shutil.rmtree('/home/denis/projects/tgws_serv/tgws_serv/media/pub_files/3204-A-00-0-0-00-00-A-022-A-D')
 load_publication('/home/denis/projects/tgws_serv/assets/pubs/ПАЗ-320445 Вектор Next (АТ)_10.08.18_12.39.02')
 
-shutil.rmtree('/home/denis/projects/tgws-serv/tgws_serv/media/pub_files/3204-A-00-0-0-00-00-A-022-A-D')
-load_publication('/home/denis/projects/tgws-serv/assets/ПубликацииПАЗ/ПАЗ-320445 Вектор Next (АТ)_10.08.18_12.39.02')
+
 """
 
 
