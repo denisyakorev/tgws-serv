@@ -13,5 +13,5 @@ from api.serializers import PublicationSerializer
 @permission_classes((permissions.AllowAny,))
 def publication_detail(request, pubcode):
     publication = Publication.objects.get(code=pubcode)
-    serializer = PublicationSerializer(publication)
+    serializer = PublicationSerializer(publication)    
     return Response(serializer.data)

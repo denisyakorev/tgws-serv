@@ -1,7 +1,7 @@
 import os
 import codecs
 import xml.etree.ElementTree as ET
-import xmltodict, json
+import json
 from django.conf import settings
 import shutil
 
@@ -296,6 +296,7 @@ def get_childrens(holder, publication, parent=None):
     """
     if not parent:
         links = PublicationModule.objects.filter(publication=publication, parent__isnull=True).order_by('order_in_parent')
+        
     else:
         links = PublicationModule.objects.filter(publication=publication, parent=parent).order_by('order_in_parent')
 
@@ -320,13 +321,24 @@ def get_tree_structure(publication):
     :rtype: str
     :raise ValueError: не найдена публикация
     """
+    """
     tree = {
-        'id': publication.id,
-        'text': publication.title,
-        'state': {'opened': True},
-        'children':[]
+        'core':{
+            'data':[{
+                'id': publication.id,
+                'text': publication.title,
+                'state': {'opened': True},
+                'children':[]
+            }]
+        }
     }
-    get_childrens(tree['children'], publication)
+    """
+    tree = {
+        'core':{
+            'data':[]
+        }
+    }
+    get_childrens(tree['core']['data'], publication)
 
     return json.dumps(tree)
 
@@ -374,8 +386,10 @@ Publication.objects.all().delete()
 Module.objects.all().delete()
 PublicationModule.objects.all().delete()
 TempModule.objects.all().delete()
-shutil.rmtree('/home/denis/projects/tgws-serv/tgws_serv/media/pub_files/3204-A-00-0-0-00-00-A-022-A-D')
+shutil.rmtree('/home/denis/projects/tgws_serv/tgws_serv/media/pub_files/3204-A-00-0-0-00-00-A-022-A-D')
+load_publication('/home/denis/projects/tgws_serv/assets/pubs/ПАЗ-320445 Вектор Next (АТ)_10.08.18_12.39.02')
 
+shutil.rmtree('/home/denis/projects/tgws-serv/tgws_serv/media/pub_files/3204-A-00-0-0-00-00-A-022-A-D')
 load_publication('/home/denis/projects/tgws-serv/assets/ПубликацииПАЗ/ПАЗ-320445 Вектор Next (АТ)_10.08.18_12.39.02')
 """
 

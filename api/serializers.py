@@ -5,4 +5,4 @@ class PublicationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Publication
-        fields = ('name', 'code', 'content_json')
+        fields = ('title', 'code', 'structure_json')
