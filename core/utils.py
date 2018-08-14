@@ -114,11 +114,8 @@ def create_category(node, publication, parent=None, order=0):
     :return: экземпляры вновь созданного модуля и связи
     :rtype: Module, PublicationModule
     :raises ValueError: ошибка при поиске параметров, нужных для создания категории
-    """
-    if node.tag == 'content':
-        title = publication.title
-    else:
-        title = node.find('pmEntryTitle').text
+    """    
+    title = node.find('pmEntryTitle').text
 
     if not title:
         raise ValueError('Для узла не указан заголовок')
@@ -181,26 +178,23 @@ def create_nodes(node, parent=None, publication=None):
     :return: результат выполнения операции - True при успешном выполнении
     :rtype: bool
     :raises ValueError: ошибки при создании модулей
-    """
-    end_module_nodes = node.findall('dmRef')
-    counter = 0
-    for node in end_module_nodes:
-        counter += 1
-        try:
-            create_end_module(node, parent, publication, counter)
-
-        except Exception as err:
-            if parent:
-                raise ValueError('Ошибка при создании модуля №%d для узла %s: %s'%(counter, parent.title, err))
-            else:
-                raise ValueError('Ошибка при создании модуля №%d для узла без родителя: %s'%(counter, parent.title, err))
-
-    categories = node.findall('pmEntry')
-    counter = 0
-    for category in categories:
-        counter += 1
-        new_category, link = create_category(category, publication)
-        create_nodes(category, parent=new_category, publication=publication)
+    """    
+    counter_end_nodes = 0
+    counter_categories = 0    
+    for child in node:
+        if child.tag == 'dmRef':
+            counter_end_nodes += 1
+            try:
+                create_end_module(child, parent, publication, counter_end_nodes)
+            except Exception as err:
+                if parent:
+                    raise ValueError('Ошибка при создании модуля №%d для узла %s: %s'%(counter_end_nodes, parent.title, err))
+                else:
+                    raise ValueError('Ошибка при создании модуля №%d для узла без родителя: %s'%(counter_end_nodes, parent.title, err))
+        elif child.tag == 'pmEntry':
+            counter_categories += 1
+            new_category, link = create_category(child, publication, parent=parent, order=counter_categories)
+            create_nodes(child, parent=new_category, publication=publication)
 
     return True
 
@@ -261,11 +255,10 @@ def load_modules(file_path, publication, path):
     except Exception as err:
         raise ValueError('В файле публикации не найден узел content: %s' % err)
 
-    #root_category, link = create_category(content, publication)
     create_nodes(content, publication=publication)
 
     #Очистим временные модули
-    #TempModule.objects.all().delete()
+    TempModule.objects.all().delete()
 
     return True
 
@@ -374,10 +367,12 @@ Publication.objects.all().delete()
 Module.objects.all().delete()
 PublicationModule.objects.all().delete()
 TempModule.objects.all().delete()
+
+#home
 shutil.rmtree('/home/denis/projects/tgws-serv/tgws_serv/media/pub_files/3204-A-00-0-0-00-00-A-022-A-D')
 load_publication('/home/denis/projects/tgws-serv/assets/ПубликацииПАЗ/ПАЗ-320445 Вектор Next (АТ)_10.08.18_12.39.02')
 
-
+#work
 shutil.rmtree('/home/denis/projects/tgws_serv/tgws_serv/media/pub_files/3204-A-00-0-0-00-00-A-022-A-D')
 load_publication('/home/denis/projects/tgws_serv/assets/pubs/ПАЗ-320445 Вектор Next (АТ)_10.08.18_12.39.02')
 
