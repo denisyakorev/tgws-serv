@@ -4,8 +4,10 @@ import xml.etree.ElementTree as ET
 import json
 from django.conf import settings
 import shutil
+import datetime
 
 from core.models import Module, Publication, PublicationModule, TempModule
+
 
 def get_publication_file(path):
     """
@@ -130,6 +132,70 @@ def create_category(node, publication, parent=None, order=0):
     return cat, link
 
 
+def get_media_path(img_name, media_path):
+    """
+    Функция, возвращающая путь к файлу в медиа-папке по его имени
+    :param str img_name: Имя файла без расширения
+    :param str media_path: Путь к директория с медиа-объектами
+    :return: Относительный путь к файлу
+    :rtype: str
+    :raises ValueError:не найден указанный файл
+    """
+    pass
+
+def get_module_content(content_xml, media_path):
+    """
+    Функция, возвращающая содержание модуля, преобразованное для просмотра
+    :param str content_xml: xml структура модуля
+    :param str media_path: путь к директории размещения медиа-контента
+    :return content_json: json строка содержания модуля
+    :rtype: str
+    :raises ValueError: ошибка при разборе xml документа
+    """
+    content = {}
+    tree = ET.fromstring(content_xml)
+    root = tree.getroot()
+    info = content['info'] = {}
+    data = content['data'] = {}
+
+    #find info
+    dmAddress = root.find('identAndStatusSection').find('dmAddress')
+    issueInfo = dmAddress.find('dmIdent').find('issueInfo')
+    info['issueNumber'] = issueInfo.get('issueNumber')
+    info['inWork'] = issueInfo.get('inWork')
+    dmAddressItems = dmAddress.find('dmAddressItems')
+    issueDate = dmAddressItems.find('issueDate')
+    date_str = issueDate.get('day')+'.'+issueDate.get('month')+'.'+issueDate.get('year')
+    info['issueDate'] = datetime.datetime.strptime(date_str, '%d.%m.%Y')
+    info['techName'] = dmAddressItems.find('dmTitle').find('techName').text
+
+    #find imgs
+    illustratedPartsCatalog = root.find('content').find('illustratedPartsCatalog')
+    imgs = illustratedPartsCatalog.find('figure').findall('graphic')
+    data['imgs'] = []
+    for img in imgs:
+        img_obj = {}
+        img_obj['src'] = get_media_path(img.get('infoEntityIdent'), media_path)
+        img_obj['id'] = img.get('id')
+        img_obj['hotspots'] = []
+        hotspots = img.findall('hotspot')
+        for hs in hotspots:
+            hs_obj = hs.attr
+            img_obj['hotspots'].append(hs_obj)
+
+        data['imgs'].append(img_obj)
+
+    #find parts
+    data['parts'] = []
+    parts = illustratedPartsCatalog.findall('catalogSeqNumber')
+    for part in parts:
+        part_obj = part.attr
+        data['parts'].append(part_obj)
+
+    content_json = json.dumps(content)
+    return content_json
+
+
 def create_end_module(node, parent=None, publication=None, order=None):
     """
     Функция, создающая модуль
@@ -152,8 +218,6 @@ def create_end_module(node, parent=None, publication=None, order=None):
     except TempModule.MultipleObjectsReturned:
         raise ValueError('В папке публикации найдено несколько модулей: %s c номером выпуска: %d' % (tech_name, issue_number))
 
-    #obj = xmltodict.parse(temp_module.content_xml)
-    #json = json.dumps(obj)
     new_module = Module(
         tech_name = tech_name,
         issue_number = issue_number,
@@ -263,7 +327,7 @@ def load_modules(file_path, publication, path):
     return True
 
 
-def copy_static(path, publication_code):
+def copy_static(path, publication_code, media_path):
     """
     Функция, копирующая статические файлы публикации в папку сервера
     :param str path: Путь к директории публикации
@@ -273,7 +337,6 @@ def copy_static(path, publication_code):
     """
     static_folder = 'graphics'
     static_path = os.path.join(path, static_folder)
-    media_path = os.path.join(settings.MEDIA_ROOT, 'pub_files', publication_code)
     shutil.copytree(static_path, media_path)
     return True
 
@@ -324,6 +387,21 @@ def get_tree_structure(publication):
     return json.dumps(tree)
 
 
+def parce_modules(publication, media_path):
+    """
+    Функция, формирующее json содержание модуля
+    :param Publication publication: экземпляр объекта публикации, для модулей которой будет заполняться содержимое
+    :param str media_path: путь к директории размещения медиа-объектов
+    :return: Флаг об успешном завершении операции
+    :rtype: bool
+    """
+    modules = publication.modules.filter(is_category = False)
+    for module in modules:
+        module.content_json = get_module_content(module.content_xml, media_path)
+        module.save()
+
+    return True
+
 def load_publication(path):
     """
     Функция для загрузки публикации
@@ -343,6 +421,7 @@ def load_publication(path):
         content_xml = pub_data['content_xml']
         )
     publication.save()
+    MEDIA_PATH = os.path.join(settings.MEDIA_ROOT, 'pub_files', publication.code)
     print("publication created")
     load_modules_from_files(path)
     print("loaded modules from files")
@@ -350,12 +429,16 @@ def load_publication(path):
     load_modules(pub_file_path, publication, path)
     print("modules from publication file loaded")
     #Перенос статического контента
-    copy_static(path, pub_data['code'])
+    copy_static(path, pub_data['code'], MEDIA_PATH)
     print("static copied")
     #Cоздание дерева модулей
     publication.structure_json = get_tree_structure(publication)
     publication.save()
     print("publication tree created")
+    parce_modules(publication)
+    print("modules parced")
+
+
     return True
 
 
