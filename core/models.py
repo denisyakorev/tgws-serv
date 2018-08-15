@@ -7,7 +7,7 @@ class Publication(models.Model):
     code = models.CharField(max_length=200, verbose_name=_('код'), unique=True)
     file_name = models.CharField(max_length=200, verbose_name=_('имя файла'))
     issue_number = models.CharField(max_length=200, verbose_name=_('номер версии'), blank=True)
-    content_xml = models.TextField(verbose_name=_('XML содержимое'), blank=True)
+    content_xml = models.BinaryField(verbose_name=_('XML содержимое'), blank=True)
     structure_json = models.TextField(verbose_name=_('JSON cтруктура'), blank=True)    
     modules = models.ManyToManyField('Module', through='PublicationModule', through_fields=('publication', 'module'), blank=True)
 
@@ -28,7 +28,7 @@ class Module(models.Model):
     title = models.CharField(max_length=200, verbose_name=_('название'))
     file_name = models.CharField(max_length=200, verbose_name=_('имя файла'), blank=True)
     issue_number = models.CharField(max_length=200, verbose_name=_('номер версии'), blank=True)
-    content_xml = models.TextField(verbose_name=_('XML содержимое'), blank=True)
+    content_xml = models.BinaryField(verbose_name=_('XML содержимое'), blank=True)
     content_json = models.TextField(verbose_name=_('JSON содержимое'), blank=True)
     is_category = models.BooleanField(verbose_name=_('категория'), default=False)
 
@@ -58,5 +58,5 @@ class TempModule(models.Model):
     title = models.CharField(max_length=200, verbose_name=_('название'))
     file_name = models.CharField(max_length=200, verbose_name=_('имя файла'), blank=True)
     issue_number = models.CharField(max_length=200, verbose_name=_('номер версии'), blank=True)
-    content_xml = models.TextField(verbose_name=_('XML содержимое'), blank=True)
+    content_xml = models.BinaryField(verbose_name=_('XML содержимое'), blank=True)
 

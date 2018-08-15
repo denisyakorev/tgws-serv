@@ -1,6 +1,7 @@
 import os
 import codecs
 import xml.etree.ElementTree as ET
+from lxml import etree
 import json
 from django.conf import settings
 import shutil
@@ -141,7 +142,17 @@ def get_media_path(img_name, media_path):
     :rtype: str
     :raises ValueError:не найден указанный файл
     """
-    pass
+    files = os.listdir(media_path)
+    full_file_name = ''
+    for file in files:
+        file_name = file.split('.')[0]
+        if file_name == img_name:
+            full_file_name = file_name
+            break
+    abs_path = os.path.join(media_path, full_file_name)
+    rel_path = abs_path.replace(settings.BASE_DIR, '')
+    return rel_path
+
 
 def get_module_content(content_xml, media_path):
     """
@@ -153,8 +164,11 @@ def get_module_content(content_xml, media_path):
     :raises ValueError: ошибка при разборе xml документа
     """
     content = {}
-    tree = ET.fromstring(content_xml)
-    root = tree.getroot()
+    parser = ET.XMLParser(encoding="utf-8")
+    root = ET.XML(content_xml, parser=parser)
+    #print(content_xml)
+    #tree = etree.fromstring(content_xml)
+    
     info = content['info'] = {}
     data = content['data'] = {}
 
@@ -292,7 +306,7 @@ def load_modules_from_files(path):
             title = tech_name,
             issue_number = issue_number,
             file_name = f,
-            content_xml = ET.tostring(root, encoding="utf-8", method="xml")
+            content_xml = ET.tostring(root, encoding='utf-8', method='xml')
         )
         temp_module.save()
 
@@ -435,7 +449,7 @@ def load_publication(path):
     publication.structure_json = get_tree_structure(publication)
     publication.save()
     print("publication tree created")
-    parce_modules(publication)
+    parce_modules(publication, MEDIA_PATH)
     print("modules parced")
 
 
@@ -459,6 +473,10 @@ load_publication('/home/denis/projects/tgws-serv/assets/ПубликацииПА
 shutil.rmtree('/home/denis/projects/tgws_serv/tgws_serv/media/pub_files/3204-A-00-0-0-00-00-A-022-A-D')
 load_publication('/home/denis/projects/tgws_serv/assets/pubs/ПАЗ-320445 Вектор Next (АТ)_10.08.18_12.39.02')
 
+#only load publications
+publication = Publication.objects.all()[0]
+MEDIA_PATH = os.path.join(settings.MEDIA_ROOT, 'pub_files', publication.code)
+parce_modules(publication, MEDIA_PATH)
 
 """
 
