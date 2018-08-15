@@ -1,11 +1,9 @@
 import os
 import codecs
 import xml.etree.ElementTree as ET
-from lxml import etree
 import json
 from django.conf import settings
 import shutil
-import datetime
 import logging
 
 from core.models import Module, Publication, PublicationModule, TempModule
