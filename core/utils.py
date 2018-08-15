@@ -6,9 +6,11 @@ import json
 from django.conf import settings
 import shutil
 import datetime
+import logging
 
 from core.models import Module, Publication, PublicationModule, TempModule
 
+logger = logging.getLogger(__name__)
 
 def get_publication_file(path):
     """
@@ -178,33 +180,35 @@ def get_module_content(content_xml, media_path):
     info['issueNumber'] = issueInfo.get('issueNumber')
     info['inWork'] = issueInfo.get('inWork')
     dmAddressItems = dmAddress.find('dmAddressItems')
-    issueDate = dmAddressItems.find('issueDate')
-    date_str = issueDate.get('day')+'.'+issueDate.get('month')+'.'+issueDate.get('year')
-    info['issueDate'] = datetime.datetime.strptime(date_str, '%d.%m.%Y')
+    issueDate = dmAddressItems.find('issueDate')    
+    info['issueDate'] = issueDate.get('day')+'.'+issueDate.get('month')+'.'+issueDate.get('year')
     info['techName'] = dmAddressItems.find('dmTitle').find('techName').text
 
     #find imgs
     illustratedPartsCatalog = root.find('content').find('illustratedPartsCatalog')
-    imgs = illustratedPartsCatalog.find('figure').findall('graphic')
-    data['imgs'] = []
-    for img in imgs:
-        img_obj = {}
-        img_obj['src'] = get_media_path(img.get('infoEntityIdent'), media_path)
-        img_obj['id'] = img.get('id')
-        img_obj['hotspots'] = []
-        hotspots = img.findall('hotspot')
-        for hs in hotspots:
-            hs_obj = hs.attr
-            img_obj['hotspots'].append(hs_obj)
+    if illustratedPartsCatalog:
+        figure = illustratedPartsCatalog.find('figure')
+        data['imgs'] = []
+        if figure:
+            imgs = figure.findall('graphic')            
+            for img in imgs:
+                img_obj = {}
+                img_obj['src'] = get_media_path(img.get('infoEntityIdent'), media_path)
+                img_obj['id'] = img.get('id')
+                img_obj['hotspots'] = []
+                hotspots = img.findall('hotspot')
+                for hs in hotspots:
+                    hs_obj = hs.attrib
+                    img_obj['hotspots'].append(hs_obj)
 
-        data['imgs'].append(img_obj)
+                data['imgs'].append(img_obj)
 
-    #find parts
-    data['parts'] = []
-    parts = illustratedPartsCatalog.findall('catalogSeqNumber')
-    for part in parts:
-        part_obj = part.attr
-        data['parts'].append(part_obj)
+        #find parts
+        data['parts'] = []
+        parts = illustratedPartsCatalog.findall('catalogSeqNumber')
+        for part in parts:
+            part_obj = part.attrib
+            data['parts'].append(part_obj)
 
     content_json = json.dumps(content)
     return content_json
@@ -474,6 +478,7 @@ shutil.rmtree('/home/denis/projects/tgws_serv/tgws_serv/media/pub_files/3204-A-0
 load_publication('/home/denis/projects/tgws_serv/assets/pubs/ПАЗ-320445 Вектор Next (АТ)_10.08.18_12.39.02')
 
 #only load publications
+from core.utils import *
 publication = Publication.objects.all()[0]
 MEDIA_PATH = os.path.join(settings.MEDIA_ROOT, 'pub_files', publication.code)
 parce_modules(publication, MEDIA_PATH)
