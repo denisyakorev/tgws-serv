@@ -147,7 +147,7 @@ def get_media_path(img_name, media_path):
     for file in files:
         file_name = file.split('.')[0]
         if file_name == img_name:
-            full_file_name = file_name
+            full_file_name = file
             break
     abs_path = os.path.join(media_path, full_file_name)
     rel_path = abs_path.replace(settings.BASE_DIR, '')
