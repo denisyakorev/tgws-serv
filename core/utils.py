@@ -206,6 +206,11 @@ def get_module_content(content_xml, media_path):
         parts = illustratedPartsCatalog.findall('catalogSeqNumber')
         for part in parts:
             part_obj = part.attrib
+            part_obj['info'] = {}
+            itemSeqNumber = part.find('itemSeqNumber')
+            part_obj['info']['quantityquantity'] = itemSeqNumber.find('quantityPerNextHigherAssy').text
+            part_obj['info']['partNumber'] = itemSeqNumber.find('partRef').get('partNumberValue')
+            part_obj['info']['code'] = itemSeqNumber.find('partRef').get('manufacturerCodeValue')
             data['parts'].append(part_obj)
 
     content_json = json.dumps(content)
