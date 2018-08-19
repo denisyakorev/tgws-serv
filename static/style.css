@@ -1,0 +1,100 @@
+html {
+  position: relative;
+  min-height: 100%;
+}
+body {
+  /* Margin bottom by footer height */
+  margin-bottom: 101px;
+}
+
+footer {
+  position: absolute !important;
+  bottom: 0;
+  width: 100%;
+  /* Set the fixed height of the footer here */
+  height: 101px;
+}
+
+th{
+	background-color: #343A40;
+	color: white;
+	text-align: center;
+}
+
+
+button {
+    cursor: pointer;
+}
+
+
+button:hover {
+    cursor: pointer;
+}
+
+
+#preloader {
+    margin-left:48%;
+}
+
+
+#name {
+    background-color: #F4F4F4;
+}
+
+.x-scroll-section{
+  overflow-x: auto;
+}
+
+
+.color-white {
+    color: white !important;
+    cursor:pointer;
+}
+
+.table-management-panel{
+    margin-bottom:30px;
+}
+
+.table-management-panel button{
+    margin-right:30px;
+}
+
+.btn-danger {
+    color: #fff;
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+
+.btn-danger:hover {
+    color: #fff;
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+.error_message{
+    color:red;
+    font-style: italic;
+}
+
+.navbar-toggler-icon{
+  color: white;
+}
+
+
+
+
+dt {
+  text-align: left !important;
+}
+
+dd {
+  text-align: left !important;
+}
+
+dd input{
+  width:100% !important;
+}
+
+
+

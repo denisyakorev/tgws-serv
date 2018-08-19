@@ -85,6 +85,10 @@ DATABASES = {
     }
 }
 
+TEMPLATE_DIRS = (
+    os.path.join(os.path.dirname(__file__), 'templates').replace('\\','/'),
+)
+
 
 # Password validation
 # https://docs.djangoproject.com/en/2.0/ref/settings/#auth-password-validators
@@ -136,7 +140,8 @@ REST_FRAMEWORK = {
 
 CORS_ORIGIN_WHITELIST = (
     'localhost:3000',
-    '127.0.0.1:3000'
+    '127.0.0.1:3000',
+    'peaceful-kepler-668a18.netlify.com'
 )
 
 
